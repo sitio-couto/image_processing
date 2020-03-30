@@ -75,7 +75,7 @@ def main(argv):
         cv2.imshow("Image", function(func_args[0], func_args[1], func_args[2:]))
     else:
         cv2.imshow("Image", function(*func_args))
-    cv2.waitKey(10000)
+    cv2.waitKey(0)
 
 if __name__ == "__main__":
    main(sys.argv)
