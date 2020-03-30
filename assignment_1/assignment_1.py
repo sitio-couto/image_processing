@@ -80,6 +80,9 @@ def main(argv):
 if __name__ == "__main__":
    main(sys.argv)
 
+#### INPUT IMAGE USED ####
+# baboon = cv2.imread('../input/baboon.png', cv2.IMREAD_GRAYSCALE)
+
 #### RESOLUTION FUNCTION OUTPUTS ####
 # cv2.imshow("256x256 samples", resolution(baboon, 256))
 # cv2.imshow("128x128 samples", resolution(baboon, 128))
@@ -104,3 +107,5 @@ if __name__ == "__main__":
 # cv2.imshow("sqr", grey_scaler(baboon, 2, [0.0039]))
 # cv2.imshow("srt_root", grey_scaler(baboon, 3, [16]))
 # cv2.imshow("spreader", grey_scaler(baboon, 4, [64, 192, 0.5, 1.5, 0.5]))
+
+# cv2.waitKey()
