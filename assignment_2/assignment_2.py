@@ -55,6 +55,8 @@ h8_left_diag = np.array([[ 2, -1, -1],
 
 def main(argv):
     try:
+        input_path  = argv[1]
+
         print(argv)
         ker = {
             '1':h1_ukn, 
@@ -65,9 +67,7 @@ def main(argv):
             '6':h6_arith_mean,
             '7':h7_right_diag,
             '8':h8_left_diag
-            }.get(argv[1])
-            
-        input_path  = argv[2]
+        }.get(argv[2])
 
     except:
         print(f'''
@@ -83,7 +83,7 @@ def main(argv):
 
     print(f"Loading image {input_path} ...")
     img = cv2.imread(input_path, cv2.IMREAD_GRAYSCALE)
-    test = ndimage.convolve(img, ker, mode='constant', cval=0.0)
+    test = cv2.filter2D(img, -1, ker)
     cv2.imshow("test",test.astype(np.uint8))
     cv2.waitKey()
     
