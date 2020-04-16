@@ -18,12 +18,12 @@ h2_gauss = np.array([[1,  4,  6,  4, 1],
                      [4, 16, 24, 16, 4],
                      [1,  4,  6,  4, 1]])/256
 
-# h3 - gradient detection (embossing) WEST
+# h3 - Sobel WEST
 h3_east_emboss = np.array([[-1, 0, 1],
                            [-2, 0, 2],
                            [-1, 0, 1]])
 
-# h4 - gradient detection (embossing) NORTH
+# h4 - Sobel NORTH
 h4_north_emboss = np.array([[-1, -2, -1],
                            [ 0,  0,  0],
                            [ 1,  2,  1]])
