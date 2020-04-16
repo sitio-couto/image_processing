@@ -4,7 +4,7 @@ from scipy import ndimage
 from scipy import misc
 import sys, argparse
 
-# h1 - ?????????????
+# h1 - Passa Alta de maior precisão e intensidade
 h1_ukn = np.array([[ 0,  0, -1,  0,  0],
                    [ 0, -1, -2, -1,  0],
                    [-1, -2, 16, -2, -1],
@@ -48,11 +48,7 @@ h8_left_diag = np.array([[ 2, -1, -1],
                          [-1,  2, -1],
                          [-1, -1,  2]])
 
-# img = cv2.imread('../input/butterfly.png', cv2.IMREAD_GRAYSCALE)
-# test = ndimage.convolve(img, h3_west_emboss, mode='constant', cval=0.0)
-# cv2.imshow("test",test.astype(np.uint8))
-# cv2.waitKey()
-
+#### MAIN FUNCTION - argparsing and filter call ####
 def main(argv):
     parser = argparse.ArgumentParser(
         description='''Apply selected filter to input image. 
@@ -82,12 +78,19 @@ def main(argv):
         8:h8_left_diag
     }
 
+    # imname = ['butterfly','city','baboon','house','seagull']
+    # for n in imname:
+    #     for i in range(1,9):
+    #         ker = kernels[i]
+    #         img = cv2.imread(f'../input/{n}.png', cv2.IMREAD_GRAYSCALE)
+    #         ker = cv2.flip(ker, -1)
+    #         out = cv2.filter2D(img, -1, ker)
+    #         cv2.imwrite(f'outputs/{n}-h{i}.png', out)
+
     print(f"Loading image {args.input} ...")
     img = cv2.imread(args.input, cv2.IMREAD_GRAYSCALE)
     ker = cv2.flip(kernels[args.ker], -1)
     out = cv2.filter2D(img, -1, ker)
-    
-    print(out)
 
     if args.sum : 
         ker = cv2.flip(kernels[args.sum], -1)
