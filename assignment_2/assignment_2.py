@@ -6,10 +6,10 @@ import sys, argparse
 
 # h1 - ?????????????
 h1_ukn = np.array([[ 0,  0, -1,  0,  0],
-                     [ 0, -1, -2, -1,  0],
-                     [-1, -2, 16, -2, -1],
-                     [ 0, -1, -2, -1,  0],
-                     [ 0,  0, -1,  0,  0]])
+                   [ 0, -1, -2, -1,  0],
+                   [-1, -2, 16, -2, -1],
+                   [ 0, -1, -2, -1,  0],
+                   [ 0,  0, -1,  0,  0]])
 
 # h2 - gaussian filter com sigma=1.0
 h2_gauss = np.array([[1,  4,  6,  4, 1],
@@ -94,7 +94,7 @@ def main(argv):
         out1 = out.astype(np.float32)
         out2 = cv2.filter2D(img, -1, ker).astype(np.float32)
         out = np.sqrt(out1**2 + out2**2)
-        out[out>255] = 255
+        out = 255*(out - out.min())/np.ptp(out).astype(int)
         out = out.astype(np.uint8)
  
     if not args.output:
