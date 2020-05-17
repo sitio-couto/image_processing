@@ -22,7 +22,7 @@ def filter(fft, ty, r1, r2):
     elif ty=='high':
         filt = (dist > r1)
     else:
-        return None
+        return fft
 
     cp = fft.copy()
     cp[np.logical_not(filt)] = 0+0j
@@ -34,7 +34,8 @@ def mag(fft):
     norm_image = norm_image.astype(np.uint8)
     return norm_image
 
-def process(img, ker, r1, r2):
+def pipeline(img, ker, r1, r2):
+    '''Show entire processing pipeline printing the image at every state.'''
     transformed = np.fft.fft2(img)                 # Apply FFT on image
     centralized = np.fft.fftshift(transformed)     # Centralize FFT origin
     filtered = filter(centralized, ker, r1, r2)    # Filter image with mask
@@ -52,9 +53,17 @@ def process(img, ker, r1, r2):
     plt.subplot(235),plt.imshow(mag(decentralized), 'gray')
     plt.title('Decentralize'), plt.xticks([]), plt.yticks([])
     plt.subplot(236),plt.imshow(reverted, 'gray')
-    plt.title('Revert FFT'), plt.xticks([]), plt.yticks([])
-    plt.show()
+    plt.title('Inverse Transform'), plt.xticks([]), plt.yticks([])
+    return plt
  
+def process(img, ker, r1, r2):
+    '''Process and return image.'''
+    transformed = np.fft.fft2(img)                  
+    centralized = np.fft.fftshift(transformed)     
+    filtered = filter(centralized, ker, r1, r2)     
+    decentralized = np.fft.ifftshift(filtered)     
+    reverted = np.abs(np.fft.ifft2(decentralized)) 
+    return reverted.astype(np.uint8)
 
 # https://medium.com/@hicraigchen/digital-image-processing-using-fourier-transform-in-python-bcb49424fd82
 
@@ -67,12 +76,12 @@ def check_radius(radius):
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(argv):
     parser = argparse.ArgumentParser(
-        description='''Apply selected filter to input image. 
-        If more than one defined, sums their individual outputs.'''
+        description='''Apply selected filter usinf FFT to input image. 
+        If no output file is defined, the image is exhibited on the screen.'''
         )
     parser.add_argument('input', help='Path of the input image.')
     parser.add_argument('-f','--filter', type=str, choices={'low','band','high'},
-                        help='Select a filter (low, band and high-pass) to apply'
+                        help='Select a filter (low, band or high-pass) to apply'
                         )
     parser.add_argument('-r1', type=check_radius,
                         help='Radius of the filter.'
@@ -80,6 +89,9 @@ def main(argv):
     parser.add_argument('-r2', type=check_radius,
                         help='External radius for band pass filter.'
                         )
+    parser.add_argument('--pipeline', action='store_true',
+                        help='Show the image state trough the entire pipeline.'
+                        )                    
     parser.add_argument('-o','--output', 
                         help='Path where the output image will be saved.'
                         )
@@ -96,13 +108,22 @@ def main(argv):
     img = cv2.imread(args.input, 0)
 
     print(f"Processing...")
-    out = process(img, args.filter, args.r1, args.r2)
-
-    # if not args.output:
-    #     cv2.imshow("test", out)
-    #     cv2.waitKey()
-    # else:
-    #     cv2.imwrite(args.output, out)
+    if args.pipeline:
+        out = pipeline(img, args.filter, args.r1, args.r2)
+    else:
+        out = process(img, args.filter, args.r1, args.r2)
+    
+    if not args.output:
+        if args.pipeline:
+            out.show()
+        else:
+            cv2.imshow("Final Image", out)
+            cv2.waitKey()
+    else:
+        if args.pipeline:
+            out.plt.savefig(args.output)
+        else:
+            cv2.imwrite(args.output, out)
 
     
 
