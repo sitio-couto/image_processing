@@ -30,9 +30,7 @@ def filter(fft, ty, r1, r2):
 
 def mag(fft):
     img = np.log(1+np.abs(fft))
-    norm_image = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
-    norm_image = norm_image.astype(np.uint8)
-    return norm_image
+    return img.astype(np.uint8)
 
 def pipeline(img, ker, r1, r2):
     '''Show entire processing pipeline printing the image at every state.'''
@@ -65,9 +63,27 @@ def process(img, ker, r1, r2):
     reverted = np.abs(np.fft.ifft2(decentralized)) 
     return reverted.astype(np.uint8)
 
+def compress(img, percent):
+    '''Compress and return image.'''
+    transformed = np.fft.fft2(img)                  
+    centralized = np.fft.fftshift(transformed)
+    
+    # Compress image
+    spec = mag(centralized)
+    base = spec.min()
+    maxval = spec.max()
+    tresh = base+(maxval-base)*(percent/100)
+    compressed = centralized.copy()
+    print(f"Compressing {len(compressed[spec < tresh])} values...")
+    compressed[spec < tresh] = 0+0j
+
+    decentralized = np.fft.ifftshift(compressed)     
+    reverted = np.abs(np.fft.ifft2(decentralized)) 
+    return reverted.astype(np.uint8)
+
 # https://medium.com/@hicraigchen/digital-image-processing-using-fourier-transform-in-python-bcb49424fd82
 
-def check_radius(radius):
+def nonneg_float(radius):
     radius = float(radius)
     if radius < 0:
         raise argparse.ArgumentTypeError("Radius must always be positive.")
@@ -80,13 +96,17 @@ def main(argv):
         If no output file is defined, the image is exhibited on the screen.'''
         )
     parser.add_argument('input', help='Path of the input image.')
-    parser.add_argument('-f','--filter', type=str, choices={'low','band','high'},
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-f','--filter', type=str, choices={'low','band','high'},
                         help='Select a filter (low, band or high-pass) to apply'
                         )
-    parser.add_argument('-r1', type=check_radius,
+    group.add_argument('-c','--compress', type=nonneg_float,
+                        help='Define the threshold for the compression (min-max range percentage)'
+                        )
+    parser.add_argument('-r1', type=nonneg_float,
                         help='Radius of the filter.'
                         )
-    parser.add_argument('-r2', type=check_radius,
+    parser.add_argument('-r2', type=nonneg_float,
                         help='External radius for band pass filter.'
                         )
     parser.add_argument('--pipeline', action='store_true',
@@ -108,11 +128,16 @@ def main(argv):
     img = cv2.imread(args.input, 0)
 
     print(f"Processing...")
-    if args.pipeline:
+    
+    # Select which process to run
+    if args.compress:
+        out = compress(img, args.compress)  
+    elif args.pipeline:
         out = pipeline(img, args.filter, args.r1, args.r2)
     else:
         out = process(img, args.filter, args.r1, args.r2)
     
+    # Select what to do with the results
     if not args.output:
         if args.pipeline:
             out.show()
