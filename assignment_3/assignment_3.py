@@ -5,25 +5,6 @@ from scipy import misc
 import sys, argparse
 from matplotlib import pyplot as plt
 
-# h1 - Passa Alta de maior precisão e intensidade
-high_pass = np.array([[ 0,  0, -1,  0,  0],
-                   [ 0, -1, -2, -1,  0],
-                   [-1, -2, 16, -2, -1],
-                   [ 0, -1, -2, -1,  0],
-                   [ 0,  0, -1,  0,  0]])
-
-# h5 - filtro passa altas
-band_pass = np.array([[-1, -1, -1],
-                         [-1,  8, -1],
-                         [-1, -1, -1]])
-
-# h2 - gaussian filter com sigma=1.0
-low_pass = np.array([[1,  4,  6,  4, 1],
-                     [4, 16, 24, 16, 4],
-                     [6, 24, 36, 24, 6],
-                     [4, 16, 24, 16, 4],
-                     [1,  4,  6,  4, 1]])/256
-
 def filter(fft, ty, r1, r2):
 
     w,h = fft.shape
@@ -48,30 +29,29 @@ def filter(fft, ty, r1, r2):
     return cp
 
 def mag(fft):
-    return 20*np.log(np.abs(fft))
+    img = np.log(1+np.abs(fft))
+    norm_image = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
+    norm_image = norm_image.astype(np.uint8)
+    return norm_image
 
 def process(img, ker, r1, r2):
-    f = np.fft.fft2(img)        # Off center transform
-    fshift = np.fft.fftshift(f) # Centralized transform
-    mag_spec = 20*np.log(np.abs(fshift))
-    off_center = 20*np.log(np.abs(f))
+    transformed = np.fft.fft2(img)                 # Apply FFT on image
+    centralized = np.fft.fftshift(transformed)     # Centralize FFT origin
+    filtered = filter(centralized, ker, r1, r2)    # Filter image with mask
+    decentralized = np.fft.ifftshift(filtered)     # Decentralize filtered FFT
+    reverted = np.abs(np.fft.ifft2(decentralized)) # Revert FFT and get intensities
 
-    filtered = filter(fshift, ker, r1, r2)
-    
-    decenter = np.fft.ifftshift(filtered)
-    revert = np.fft.ifft2(decenter)
-
-    plt.subplot(231),plt.imshow(img, cmap = 'gray')
+    plt.subplot(231),plt.imshow(img, 'gray')
     plt.title('Read'), plt.xticks([]), plt.yticks([])
-    plt.subplot(232),plt.imshow(off_center, cmap = 'gray')
+    plt.subplot(232),plt.imshow(mag(transformed), 'gray')
     plt.title('Transform'), plt.xticks([]), plt.yticks([])
-    plt.subplot(233),plt.imshow(mag_spec, cmap = 'gray')
+    plt.subplot(233),plt.imshow(mag(centralized), 'gray')
     plt.title('Centralize'), plt.xticks([]), plt.yticks([])
-    plt.subplot(234),plt.imshow(mag(filtered), cmap = 'gray')
+    plt.subplot(234),plt.imshow(mag(filtered), 'gray')
     plt.title('Filter'), plt.xticks([]), plt.yticks([])
-    plt.subplot(235),plt.imshow(mag(decenter), cmap = 'gray')
+    plt.subplot(235),plt.imshow(mag(decentralized), 'gray')
     plt.title('Decentralize'), plt.xticks([]), plt.yticks([])
-    plt.subplot(236),plt.imshow(mag(revert), cmap = 'gray')
+    plt.subplot(236),plt.imshow(reverted, 'gray')
     plt.title('Revert FFT'), plt.xticks([]), plt.yticks([])
     plt.show()
  
