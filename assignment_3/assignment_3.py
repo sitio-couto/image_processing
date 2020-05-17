@@ -69,7 +69,7 @@ def process(img, ker, r1, r2):
 
 def check_radius(radius):
     radius = float(radius)
-    if radius <= 0:
+    if radius < 0:
         raise argparse.ArgumentTypeError("Radius must always be positive.")
     return radius
 
@@ -99,10 +99,10 @@ def main(argv):
     args = parser.parse_args()
 
     if args.filter=='band':
-        if not args.r1: raise Exception("Define '-r1' (Inner Radius)")
-        if not args.r2: raise Exception("Define '-r2' (Outer Radius)")
+        if args.r1==None: raise Exception("Define '-r1' (Inner Radius)")
+        if args.r2==None: raise Exception("Define '-r2' (Outer Radius)")
     elif args.filter:
-        if not args.r1: raise Exception("Define '-r1' (Kernel Radius)")
+        if args.r1==None: raise Exception("Define '-r1' (Kernel Radius)")
 
     print(f"Loading image {args.input} ...")
     img = cv2.imread(args.input, 0)
@@ -120,12 +120,13 @@ def main(argv):
             cv2.imshow("Final Image", out)
             cv2.waitKey()
     else:
+        print(f"Saving to {args.output}...")
         if args.pipeline:
             out.plt.savefig(args.output)
         else:
             cv2.imwrite(args.output, out)
 
-    
+    print("Done.")
 
 if __name__ == "__main__":
    main(sys.argv)
