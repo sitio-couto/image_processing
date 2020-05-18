@@ -1,8 +1,6 @@
+import sys, argparse
 import cv2
 import numpy as np
-from scipy import ndimage
-from scipy import misc
-import sys, argparse
 from matplotlib import pyplot as plt
 
 def filter(fft, ty, r1, r2):
