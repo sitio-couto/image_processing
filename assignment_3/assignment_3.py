@@ -79,8 +79,6 @@ def compress(img, percent):
     reverted = np.abs(np.fft.ifft2(decentralized)) 
     return reverted.astype(np.uint8)
 
-# https://medium.com/@hicraigchen/digital-image-processing-using-fourier-transform-in-python-bcb49424fd82
-
 def nonneg_float(radius):
     radius = float(radius)
     if radius < 0:
