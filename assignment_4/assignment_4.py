@@ -30,21 +30,20 @@ def morphing (img, kA, kB, kC):
     # Tag sets with horizontal proximity
     kernel = np.ones(kA,np.uint8)
     horizontal = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
-    if args.verbose: show(f"Horizontal Closing {kA}", horizontal)
+    if args.double_verbose: show(f"Horizontal Closing {kA}", horizontal)
 
     # Tag sets with vertical proximity
     kernel = np.ones(kB,np.uint8)
     vertical = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
-    if args.verbose: show(f"Vertical Closing {kB}", vertical)
+    if args.double_verbose: show(f"Vertical Closing {kB}", vertical)
 
     # Intersect closings to tag blocks in the image
     intersection = cv2.bitwise_and(horizontal, vertical)
-    if args.verbose: show(f"Intesection", intersection)
+    if args.double_verbose: show(f"Intesection", intersection)
 
     # Refine blocks to improve connectivity
     kernel = np.ones(kC,np.uint8)
     refined = cv2.morphologyEx(intersection, cv2.MORPH_CLOSE, kernel)
-    if args.verbose: show(f"Refined {kC}", refined)
     
     # Fetch connected components from the segmented image
     stats = cv2.connectedComponentsWithStats(refined, 4, cv2.CV_32S)[2]
@@ -68,30 +67,36 @@ def ratios(box, wid, hei):
     return bw_ratio,trans_ratio
 
 def classification(rgb,neg):
-    morphed,stats = morphing(neg, (1,100), (200,1), (1,30))
+    line_count,word_count = 0,0
 
+    # Capturing lines
+    morphed,stats = morphing(neg, (1,100), (200,1), (1,30))
+    if args.verbose: show("Lines Components", morphed)
     for x0,y0,wid,hei,_ in stats:
-        # Extract rectangle of the line to calculate ratio
+        # Extract the bouding box of a connected component
         box = morphed[y0:y0+hei, x0:x0+wid]
         bw_ratio,trans_ratio = ratios(box, wid, hei)
+        # Checking if component is a line
+        if 0.5<bw_ratio<0.9 and trans_ratio<0.08:
+            line_count += 1
+            if args.tag_lines:
+                cv2.rectangle(rgb, (x0,y0), (x0+wid, y0+hei), (255,0,0), 3)
 
-        # Filtering what is text and not text
-        if 0.5<bw_ratio<0.9 and trans_ratio<0.1:
-            cv2.rectangle(rgb, (x0,y0), (x0+wid, y0+hei), (255,0,0), 3)
-            line = neg[y0:y0+hei, x0:x0+wid]
-            line,inner_stats = morphing(line, (1,10), (10,1), (1,13))
-            for x,y,wid,hei,_ in inner_stats[1:]:
-                word = line[y:y+hei, x:x+wid]
-                if not len(word): continue
-                bw_ratio,trans_ratio = ratios(word, wid, hei)
-                # Filtering what is word and not
-                if 0.35<bw_ratio<0.92 and trans_ratio<0.16:
-                    # Drawing rectangles
-                    cv2.rectangle(rgb, (x0+x,y0+y),(x0+x+wid,y0+y+hei), (0,0,255), 3)
-                # else:
-                #     print(bw_ratio,trans_ratio)
-                #     cv2.rectangle(rgb, (x0+x,y0+y),(x0+x+wid,y0+y+hei), (255,0,0), 3)
-                #     show('test',rgb)
+    # Capturing words
+    morphed,stats = morphing(neg, (1,12), (4,1), (5,10))
+    if args.verbose: show("Words Components", morphed)
+    for x0,y0,wid,hei,_ in stats:
+        # Extract the bouding box of a connected component
+        word = morphed[y0:y0+hei, x0:x0+wid]
+        bw_ratio,trans_ratio = ratios(word, wid, hei)
+        # Checking if component is a word 
+        if 0.35<bw_ratio<0.92 and trans_ratio<0.16:
+            word_count += 1
+            if not args.tag_lines:
+                cv2.rectangle(rgb, (x0,y0),(x0+wid,y0+hei), (0,0,255), 3)
+
+    return line_count,word_count
+                
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(args):
     if args.to_pbm: 
@@ -105,9 +110,16 @@ def main(args):
 
     rgb = cv2.cvtColor(pbm.copy(),cv2.COLOR_GRAY2RGB)
     neg = cv2.bitwise_not(pbm.copy())
-    classification(rgb,neg)
+    lines,words = classification(rgb,neg)
 
-    show("Segmentation", rgb)
+    verbose = args.verbose or args.double_verbose
+    drawing = args.tag_lines or args.tag_words
+    if  (verbose and drawing) or args.show: 
+        show(f"Segmentation", rgb)
+    print(f"----------------------")
+    print(f"Lines Count: {lines:>5}")
+    print(f"Word Count:  {words:>5}")
+    print(f"----------------------")
 
     # # Select what to do with the results
     # if not args.output:
@@ -131,11 +143,26 @@ if __name__ == "__main__":
         description='''Segment text in a given image.'''
         )
     parser.add_argument('input', help='Path of the input image.')
-    parser.add_argument('-b','--to-pbm', type=int,metavar="[0-255]",
+    parser.add_argument('-b','--to-pbm', type=int, metavar="[0-255]",
                         help='Convert image to PBM given a threshold and save to path.'
                         )
+    parser.add_argument('-s','--show', action='store_true',
+                        help='Exhibit final segmented text image.'
+                        )
     parser.add_argument('-v','--verbose', action='store_true',
+                        help='Exhibit images with the connected components.'
+                        )
+    parser.add_argument('-vv','--double-verbose', action='store_true',
                         help='Exhibit images for each processing step.'
+                        )
+    parser.add_argument('-o','--output', type=str,
+                        help='Saves PBM file to output path.'
+                        )
+    parser.add_argument('-l','--tag-lines', action='store_true',
+                        help='Draw bounding boxes for each line on the image.'
+                        )
+    parser.add_argument('-w','--tag-words', action='store_true',
+                        help='Draw bounding boxes for each word on the image.'
                         )
     args = parser.parse_args()
 
