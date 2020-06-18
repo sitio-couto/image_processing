@@ -77,22 +77,21 @@ def classification(rgb,neg):
 
         # Filtering what is text and not text
         if 0.5<bw_ratio<0.9 and trans_ratio<0.1:
-            # cv2.rectangle(raw, (x0,y0), (x0+wid, y0+hei), (0,0,255), 3)
+            cv2.rectangle(rgb, (x0,y0), (x0+wid, y0+hei), (255,0,0), 3)
             line = neg[y0:y0+hei, x0:x0+wid]
             line,inner_stats = morphing(line, (1,10), (10,1), (1,13))
-            for x,y,wid,hei,_ in inner_stats:
+            for x,y,wid,hei,_ in inner_stats[1:]:
                 word = line[y:y+hei, x:x+wid]
                 if not len(word): continue
                 bw_ratio,trans_ratio = ratios(word, wid, hei)
                 # Filtering what is word and not
-                if 0.3<bw_ratio<0.93 and trans_ratio<0.2:
+                if 0.35<bw_ratio<0.92 and trans_ratio<0.16:
                     # Drawing rectangles
                     cv2.rectangle(rgb, (x0+x,y0+y),(x0+x+wid,y0+y+hei), (0,0,255), 3)
-                    # show('test',rgb)
-                else:
-                    print(bw_ratio,trans_ratio)
-                    cv2.rectangle(rgb, (x0+x,y0+y),(x0+x+wid,y0+y+hei), (255,0,0), 3)
-                    show('test',rgb)
+                # else:
+                #     print(bw_ratio,trans_ratio)
+                #     cv2.rectangle(rgb, (x0+x,y0+y),(x0+x+wid,y0+y+hei), (255,0,0), 3)
+                #     show('test',rgb)
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(args):
     if args.to_pbm: 
