@@ -24,8 +24,7 @@ def convert_pbm(path, threshold):
     exit()
 
 def morphing (img, kA, kB, kC):
-    img = cv2.bitwise_not(img)
-
+    img = img.copy()
     if args.verbose: show("Negated Input", img)
 
     # Tag sets with horizontal proximity
@@ -68,30 +67,32 @@ def ratios(box, wid, hei):
 
     return bw_ratio,trans_ratio
 
-def classification(raw,img,stats):
+def classification(rgb,neg):
+    morphed,stats = morphing(neg, (1,100), (200,1), (1,30))
 
     for x0,y0,wid,hei,_ in stats:
         # Extract rectangle of the line to calculate ratio
-        box = img[y0:y0+hei, x0:x0+wid]
+        box = morphed[y0:y0+hei, x0:x0+wid]
         bw_ratio,trans_ratio = ratios(box, wid, hei)
 
         # Filtering what is text and not text
         if 0.5<bw_ratio<0.9 and trans_ratio<0.1:
-            cv2.rectangle(raw, (x0,y0), (x0+wid, y0+hei), (0,0,255), 3)
-            pass
-        else:
-            cv2.rectangle(raw, (x0,y0), (x0+wid, y0+hei), (255,0,0), 3)
-            print(bw_ratio,trans_ratio)
-            show("test",raw)
-            # _,aux = morphing(box, (1,10), (10,1), (1,13))
-            # for x,y,wid,hei,_ in aux:
-            #     word = img[y0+y:y0+y+hei, x0+x:x0+x+wid]
-            #     bw_ratio,trans_ratio = ratios(word, wid, hei)
-            #     # Filtering what is word and not
-            #     if bw_ratio>0.1 and bw_ratio<0.7:
-            #         # Drawing rectangles
-            #         cv2.rectangle(raw, (x0+x,y0+y0), (x0+x+wid,y0+y+hei), 1, 1)
-
+            # cv2.rectangle(raw, (x0,y0), (x0+wid, y0+hei), (0,0,255), 3)
+            line = neg[y0:y0+hei, x0:x0+wid]
+            line,inner_stats = morphing(line, (1,10), (10,1), (1,13))
+            for x,y,wid,hei,_ in inner_stats:
+                word = line[y:y+hei, x:x+wid]
+                if not len(word): continue
+                bw_ratio,trans_ratio = ratios(word, wid, hei)
+                # Filtering what is word and not
+                if 0.3<bw_ratio<0.93 and trans_ratio<0.2:
+                    # Drawing rectangles
+                    cv2.rectangle(rgb, (x0+x,y0+y),(x0+x+wid,y0+y+hei), (0,0,255), 3)
+                    # show('test',rgb)
+                else:
+                    print(bw_ratio,trans_ratio)
+                    cv2.rectangle(rgb, (x0+x,y0+y),(x0+x+wid,y0+y+hei), (255,0,0), 3)
+                    show('test',rgb)
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(args):
     if args.to_pbm: 
@@ -99,15 +100,15 @@ def main(args):
         convert_pbm(args.input, args.to_pbm)
 
     print(f"Loading image {args.input} ...")
-    img = cv2.imread(args.input, -1)
+    pbm = cv2.imread(args.input, -1)
 
     print(f"Processing...")
 
-    refined,stats = morphing(img, (1,100), (200,1), (1,30))
-    img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
-    classification(img,refined,stats)
+    rgb = cv2.cvtColor(pbm.copy(),cv2.COLOR_GRAY2RGB)
+    neg = cv2.bitwise_not(pbm.copy())
+    classification(rgb,neg)
 
-    show("Segmentation", img)
+    show("Segmentation", rgb)
 
     # # Select what to do with the results
     # if not args.output:
