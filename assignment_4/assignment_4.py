@@ -25,14 +25,14 @@ def convert_pbm(path, threshold):
 
 def morphing (img, kA, kB, kC):
     img = img.copy()
-    if args.verbose: show("Negated Input", img)
+    if args.double_verbose: show("Negated Input", img)
 
-    # Tag sets with horizontal proximity
+    # Join and isolate sets with horizontal proximity
     kernel = np.ones(kA,np.uint8)
     horizontal = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
     if args.double_verbose: show(f"Horizontal Closing {kA}", horizontal)
 
-    # Tag sets with vertical proximity
+    # Join and isolate sets with vertical proximity
     kernel = np.ones(kB,np.uint8)
     vertical = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
     if args.double_verbose: show(f"Vertical Closing {kB}", vertical)
@@ -83,17 +83,21 @@ def classification(rgb,neg):
                 cv2.rectangle(rgb, (x0,y0), (x0+wid, y0+hei), (255,0,0), 3)
 
     # Capturing words
-    morphed,stats = morphing(neg, (1,12), (4,1), (5,10))
+    morphed,stats = morphing(neg, (1,12), (4,1), (8,12))
     if args.verbose: show("Words Components", morphed)
     for x0,y0,wid,hei,_ in stats:
         # Extract the bouding box of a connected component
         word = morphed[y0:y0+hei, x0:x0+wid]
         bw_ratio,trans_ratio = ratios(word, wid, hei)
         # Checking if component is a word 
-        if 0.35<bw_ratio<0.92 and trans_ratio<0.16:
+        if 0.35<bw_ratio<0.95 and trans_ratio<0.2:
             word_count += 1
             if not args.tag_lines:
                 cv2.rectangle(rgb, (x0,y0),(x0+wid,y0+hei), (0,0,255), 3)
+        elif args.debug:
+            print(f"\nBW Ratio: {bw_ratio}\nTR Ratio {trans_ratio}")
+            cv2.rectangle(rgb, (x0,y0),(x0+wid,y0+hei), (255,0,0), 3)
+            show("DEBUG", rgb)
 
     return line_count,word_count
                 
@@ -116,24 +120,16 @@ def main(args):
     drawing = args.tag_lines or args.tag_words
     if  (verbose and drawing) or args.show: 
         show(f"Segmentation", rgb)
-    print(f"----------------------")
+    print(f"--------------------")
     print(f"Lines Count: {lines:>5}")
     print(f"Word Count:  {words:>5}")
-    print(f"----------------------")
+    print(f"--------------------")
 
-    # # Select what to do with the results
-    # if not args.output:
-    #     if args.pipeline:
-    #         out.show()
-    #     else:
-    #         cv2.imshow("Final Image", out)
-    #         cv2.waitKey()
-    # else:
-    #     print(f"Saving to {args.output}...")
-    #     if args.pipeline:
-    #         out.plt.savefig(args.output)
-    #     else:
-    #         cv2.imwrite(args.output, out)
+    # Save segmented image as a PBM
+    if args.output:
+        print(f"Saving to {args.output}...")
+        gray = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
+        cv2.imwrite(args.output, gray, [cv2.IMWRITE_PXM_BINARY])
 
     print("Done.")
 
@@ -148,6 +144,9 @@ if __name__ == "__main__":
                         )
     parser.add_argument('-s','--show', action='store_true',
                         help='Exhibit final segmented text image.'
+                        )
+    parser.add_argument('-d','--debug', action='store_true',
+                        help='Show which blocks do not match lines or words.'
                         )
     parser.add_argument('-v','--verbose', action='store_true',
                         help='Exhibit images with the connected components.'
