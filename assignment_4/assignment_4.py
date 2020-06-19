@@ -1,7 +1,6 @@
 import sys, argparse
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 
 def show(msg, img, res=.6):
     cv2.imshow(msg,cv2.resize(img, (0,0), fx=res, fy=res))
