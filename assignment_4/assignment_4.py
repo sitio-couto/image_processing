@@ -74,7 +74,7 @@ def classification(
                 color    =None,
                 tag      =False
                 ):
-                
+
     check = lambda val,l: bool(l[0]<=val<=l[1])
     count = 0
 
@@ -118,7 +118,7 @@ def main(args):
                 bw_range = (0.5,0.9), 
                 tr_range = (0,0.08), 
                 color    = (255,0,0),
-                tag      = args.tag_lines
+                tag      = args.tag_lines or args.tag_all
                 )
 
     # Check for words
@@ -128,11 +128,11 @@ def main(args):
                 bw_range = (0.35,0.95), 
                 tr_range = (0,0.2), 
                 color    = (0,200,0),
-                tag      = args.tag_words or not args.tag_lines
+                tag      = args.tag_all or not args.tag_lines
                 )
 
     verbose = args.verbose or args.double_verbose
-    drawing = args.tag_lines or args.tag_words
+    drawing = args.tag_lines or args.tag_all
     if  (verbose and drawing) or args.show: 
         show(f"Segmentation", rgb)
     print(f"--------------------")
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     parser.add_argument('-l','--tag-lines', action='store_true',
                         help='Draw bounding boxes for each line on the image.'
                         )
-    parser.add_argument('-w','--tag-words', action='store_true',
+    parser.add_argument('-a','--tag-all', action='store_true',
                         help='Draw bounding boxes for each word on the image.'
                         )
     args = parser.parse_args()
