@@ -131,8 +131,7 @@ def main(args):
                 )
 
     verbose = args.verbose or args.double_verbose
-    drawing = args.tag_lines or args.tag_all
-    if  (verbose and drawing) or args.show: 
+    if verbose or args.show or not args.output: 
         show(f"Segmentation", rgb)
     print(f"--------------------")
     print(f"Lines Count: {lines:>5}")
