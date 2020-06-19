@@ -141,8 +141,9 @@ def main(args):
     # Save segmented image as a PBM
     if args.output:
         print(f"Saving to {args.output}...")
-        gray = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
-        cv2.imwrite(args.output, gray, [cv2.IMWRITE_PXM_BINARY])
+        grey = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
+        grey[grey<250] = 0
+        cv2.imwrite(args.output, grey, [cv2.IMWRITE_PXM_BINARY])
 
     print("Done.")
 
