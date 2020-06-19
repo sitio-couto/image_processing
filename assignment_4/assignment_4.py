@@ -26,7 +26,7 @@ def convert_pbm(path, threshold):
 def morphing (img, kA, kB, kC):
     img = img.copy()
     if args.double_verbose: show("Negated Input", img)
-
+    
     # Join and isolate sets with horizontal proximity
     kernel = np.ones(kA,np.uint8)
     horizontal = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
@@ -66,40 +66,36 @@ def ratios(box, wid, hei):
 
     return bw_ratio,trans_ratio
 
-def classification(rgb,neg):
-    line_count,word_count = 0,0
+def classification(
+                rgb,neg,
+                kernels  =None,
+                bw_range =None,
+                tr_range =None,
+                color    =None,
+                tag      =False
+                ):
+                
+    check = lambda val,l: bool(l[0]<=val<=l[1])
+    count = 0
 
     # Capturing lines
-    morphed,stats = morphing(neg, (1,100), (200,1), (1,30))
-    if args.verbose: show("Lines Components", morphed)
+    morphed,stats = morphing(neg, *kernels)
+    if args.verbose: show("Components", morphed)
     for x0,y0,wid,hei,_ in stats:
         # Extract the bouding box of a connected component
         box = morphed[y0:y0+hei, x0:x0+wid]
         bw_ratio,trans_ratio = ratios(box, wid, hei)
         # Checking if component is a line
-        if 0.5<bw_ratio<0.9 and trans_ratio<0.08:
-            line_count += 1
-            if args.tag_lines:
-                cv2.rectangle(rgb, (x0,y0), (x0+wid, y0+hei), (255,0,0), 3)
-
-    # Capturing words
-    morphed,stats = morphing(neg, (1,12), (4,1), (8,12))
-    if args.verbose: show("Words Components", morphed)
-    for x0,y0,wid,hei,_ in stats:
-        # Extract the bouding box of a connected component
-        word = morphed[y0:y0+hei, x0:x0+wid]
-        bw_ratio,trans_ratio = ratios(word, wid, hei)
-        # Checking if component is a word 
-        if 0.35<bw_ratio<0.95 and trans_ratio<0.2:
-            word_count += 1
-            if not args.tag_lines:
-                cv2.rectangle(rgb, (x0,y0),(x0+wid,y0+hei), (0,0,255), 3)
+        if check(bw_ratio, bw_range) and check(trans_ratio, tr_range):
+            count += 1
+            if tag:
+                cv2.rectangle(rgb, (x0,y0), (x0+wid, y0+hei), color, 3)
         elif args.debug:
             print(f"\nBW Ratio: {bw_ratio}\nTR Ratio {trans_ratio}")
-            cv2.rectangle(rgb, (x0,y0),(x0+wid,y0+hei), (255,0,0), 3)
+            cv2.rectangle(rgb, (x0,y0),(x0+wid,y0+hei), (0,0,255), 3)
             show("DEBUG", rgb)
 
-    return line_count,word_count
+    return count
                 
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(args):
@@ -114,7 +110,26 @@ def main(args):
 
     rgb = cv2.cvtColor(pbm.copy(),cv2.COLOR_GRAY2RGB)
     neg = cv2.bitwise_not(pbm.copy())
-    lines,words = classification(rgb,neg)
+
+    # Check for lines
+    lines = classification(
+                rgb, neg, 
+                kernels  = [(1,100), (200,1), (1,30)], 
+                bw_range = (0.5,0.9), 
+                tr_range = (0,0.08), 
+                color    = (255,0,0),
+                tag      = args.tag_lines
+                )
+
+    # Check for words
+    words = classification(
+                rgb, neg, 
+                kernels  = [(1,12), (4,1), (8,12)], 
+                bw_range = (0.35,0.95), 
+                tr_range = (0,0.2), 
+                color    = (0,200,0),
+                tag      = args.tag_words or not args.tag_lines
+                )
 
     verbose = args.verbose or args.double_verbose
     drawing = args.tag_lines or args.tag_words
