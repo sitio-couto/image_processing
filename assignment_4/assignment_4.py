@@ -133,6 +133,7 @@ def main(args):
     verbose = args.verbose or args.double_verbose
     if verbose or args.show or not args.output: 
         show(f"Segmentation", rgb)
+        # cv2.imwrite('./outputs/font.png', rgb)
     print(f"--------------------")
     print(f"Lines Count: {lines:>5}")
     print(f"Word Count:  {words:>5}")
