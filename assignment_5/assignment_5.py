@@ -15,15 +15,15 @@ def main(args):
     imgB = cv2.imread(args.image_B, -1)
 
     print(f"Processing...")
-
     # Finding interest points
-    sift = cv2.SIFT_create()
-    kp1, des1 = sift.detectAndCompute(img1,None)
-    kp2, des2 = sift.detectAndCompute(img2,None)
-    cv2.imshow('original_image_left_keypoints',cv2.drawKeypoints(img_,kp1,None))
-
+    desc = {
+        'sift':cv2.xfeatures2d.SIFT_create(),
+        'surf':cv2.xfeatures2d.SURF_create(),
+        'orb':cv2.ORB_create()}.get(args.descriptor)
+    kp1, des1 = desc.detectAndCompute(imgA,None)
+    kp2, des2 = desc.detectAndCompute(imgB,None)
     cv2.imshow("A", imgA)
-    cv2.imshow("B", imgB)
+    cv2.imshow('original_image_left_keypoints',cv2.drawKeypoints(imgA,kp1,None))
     cv2.waitKey()
     exit()
 
@@ -45,18 +45,18 @@ if __name__ == "__main__":
                         help='Path to the first part of the image to be stiched.')
     parser.add_argument('image_B',
                         help='Path to the second part of the image to be stiched.')
+    parser.add_argument('descriptor', type=str, choices=['sift','surf','orb'],
+                        help='Select descriptor to match the images features.'
+                        )
     # parser.add_argument('-b','--to-pbm', type=int, metavar="[0-255]",
     #                     help='Convert image to PBM given a threshold and save to path.'
     #                     )
     # parser.add_argument('-s','--show', action='store_true',
     #                     help='Exhibit final segmented text image.'
     #                     )
-    # parser.add_argument('-d','--debug', action='store_true',
-    #                     help='Show which blocks do not match lines or words.'
-    #                     )
-    # parser.add_argument('-v','--verbose', action='store_true',
-    #                     help='Exhibit images with the connected components.'
-    #                     )
+    parser.add_argument('-v','--verbose', action='store_true',
+                        help='Exhibit images with the connected components.'
+                        )
     # parser.add_argument('-vv','--double-verbose', action='store_true',
     #                     help='Exhibit images for each processing step.'
     #                     )
