@@ -19,7 +19,7 @@ def main(args):
     desc = {
         'sift':cv2.xfeatures2d.SIFT_create(),
         'surf':cv2.xfeatures2d.SURF_create(),
-        'brief':cv2.xfeatures2d.BRIEF_create(),
+        'brisk':cv2.BRISK_create(),
         'orb':cv2.ORB_create()
         }.get(args.descriptor)
     
@@ -48,7 +48,7 @@ def main(args):
         cv2.waitKey()
 
     # Check if there are at least 4 points
-    assert len(good)>=4, Exception(f'Too Few Mathches (got/need: {len(good)}/{MIN_MATCH})')
+    assert len(good)>=4, Exception(f'Too Few Mathches (got/need: {len(good)}/{4})')
 
     goal = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
     curr = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
@@ -87,7 +87,7 @@ if __name__ == "__main__":
                         help='Path to the first part of the image to be stiched.')
     parser.add_argument('image_B',
                         help='Path to the second part of the image to be stiched.')
-    parser.add_argument('descriptor', type=str, choices=['sift','surf','brief','orb'],
+    parser.add_argument('descriptor', type=str, choices=['sift','surf','brisk','orb'],
                         help='Select descriptor to match the images features.'
                         )
     parser.add_argument('-t','--threshold', nargs='?', default=0.1, type=float,
