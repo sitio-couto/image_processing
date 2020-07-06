@@ -77,10 +77,9 @@ def main(args):
     else:
         raise Exception(f'Too Few Mathches (got/need: {len(good)}/{MIN_MATCH})')
 
-    dst = cv2.warpPerspective(imgB,M,(imgA.shape[1] + imgB.shape[1], imgA.shape[0]))
-    dst = trim(dst)
-    
-    # dst[0:img.shape[0],0:img.shape[1]] = imgA
+    dst = cv2.warpPerspective(imgA,M,(imgB.shape[1] + imgA.shape[1], imgB.shape[0]))
+    dst[0:imgB.shape[0],0:imgB.shape[1]] = imgB
+
     if args.verbose:
         cv2.imshow("Joined and Colored", dst)
         cv2.imshow("Joined and Colored", imgB)
