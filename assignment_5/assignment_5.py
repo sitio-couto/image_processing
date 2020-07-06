@@ -33,9 +33,7 @@ def stich(desc, imgA, imgAG, imgB,imgBG):
     if args.verbose:
         cv2.imshow("Linked Features", links)
         cv2.waitKey()
-    if args.output:
-        cv2.imwrite('outputs/quinni-links.jpg', links)
-
+        
     # Check if there are at least 4 points
     assert len(good)>=4, Exception(f'Too Few Mathches (got/need: {len(good)}/{4})')
 
