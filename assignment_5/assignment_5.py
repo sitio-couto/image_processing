@@ -61,12 +61,13 @@ def main(args):
     if args.verbose:
         cv2.imshow("Linked Features", links)
         cv2.waitKey()
-    
+
     MIN_MATCH = 10
     if len(good) > MIN_MATCH:
-        src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
-        dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+        dst_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+        src_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+        # imgA,imgAG,imgB,imgBG = imgB,imgBG,imgA,imgAG
         h,w = imgAG.shape
         pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
         dst = cv2.perspectiveTransform(pts, M)
@@ -77,14 +78,8 @@ def main(args):
     else:
         raise Exception(f'Too Few Mathches (got/need: {len(good)}/{MIN_MATCH})')
 
-    dst = cv2.warpPerspective(imgA,M,(imgB.shape[1] + imgA.shape[1], imgB.shape[0]))
-    dst[0:imgB.shape[0],0:imgB.shape[1]] = imgB
-
-    if args.verbose:
-        cv2.imshow("Joined and Colored", dst)
-        cv2.imshow("Joined and Colored", imgB)
-        cv2.waitKey()
-    
+    dst = cv2.warpPerspective(imgB,M,(imgA.shape[1] + imgB.shape[1], imgA.shape[0]))
+    dst[0:imgA.shape[0],0:imgA.shape[1]] = imgA
     cv2.imshow("original_image_stitched_crop.jpg", trim(dst))
     cv2.waitKey()
 
