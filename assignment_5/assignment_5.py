@@ -1,6 +1,21 @@
 import sys, argparse, cv2
 import numpy as np
 
+def trim(frame):
+    #crop top
+    if not np.sum(frame[0]):
+        return trim(frame[1:])
+    #crop top
+    if not np.sum(frame[-1]):
+        return trim(frame[:-2])
+    #crop top
+    if not np.sum(frame[:,0]):
+        return trim(frame[:,1:])
+    #crop top
+    if not np.sum(frame[:,-1]):
+        return trim(frame[:,:-2])
+    return frame
+
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(args):
 
@@ -35,6 +50,7 @@ def main(args):
     for m,n in matches:
         if m.distance < 0.1*n.distance:
             good.append(m)
+    good = np.asarray(good)
 
     draw_params = dict( matchColor = (0,255,0), # draw matches in green color
                         singlePointColor = None,
@@ -55,30 +71,20 @@ def main(args):
         pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
         dst = cv2.perspectiveTransform(pts, M)
         img = cv2.polylines(imgBG,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-        # cv2.imshow("original_image_overlapping.jpg", img)
-        # cv2.waitKey()
+        if args.verbose:
+            cv2.imshow("Sliced and Rotated", img)
+            cv2.waitKey()
     else:
         raise Exception(f'Too Few Mathches (got/need: {len(good)}/{MIN_MATCH})')
 
     dst = cv2.warpPerspective(imgB,M,(imgA.shape[1] + imgB.shape[1], imgA.shape[0]))
-    dst[0:img.shape[0],0:img.shape[1]] = imgA
-    # cv2.imshow("original_image_stitched.jpg", dst)
-    # cv2.waitKey()
+    dst = trim(dst)
     
-    def trim(frame):
-        #crop top
-        if not np.sum(frame[0]):
-            return trim(frame[1:])
-        #crop top
-        if not np.sum(frame[-1]):
-            return trim(frame[:-2])
-        #crop top
-        if not np.sum(frame[:,0]):
-            return trim(frame[:,1:])
-        #crop top
-        if not np.sum(frame[:,-1]):
-            return trim(frame[:,:-2])
-        return frame
+    # dst[0:img.shape[0],0:img.shape[1]] = imgA
+    if args.verbose:
+        cv2.imshow("Joined and Colored", dst)
+        cv2.imshow("Joined and Colored", imgB)
+        cv2.waitKey()
     
     cv2.imshow("original_image_stitched_crop.jpg", trim(dst))
     cv2.waitKey()
