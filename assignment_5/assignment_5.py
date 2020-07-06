@@ -1,6 +1,21 @@
 import sys, argparse, cv2
 import numpy as np
 
+def trim_edges(dst):
+    img = cv2.cvtColor(dst,cv2.COLOR_BGR2GRAY)
+    lines   = img.sum(axis=0)
+    colunms = img.sum(axis=1)
+    
+    top,bottom = 0,(img.shape[0]-1)
+    left,right = -1,(img.shape[1]-1)
+
+    while not lines[left]: left += 1
+    while not colunms[top]: top += 1
+    
+    while not lines[right]: right -= 1
+    while not colunms[bottom]: bottom -= 1
+
+    return dst[top:bottom, left:right]
 
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(args):
@@ -59,12 +74,13 @@ def main(args):
     img = cv2.polylines(imgBG, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
     
     if args.verbose:
-        cv2.imshow("Merged", img)
+        cv2.imshow("Merge Line", img)
         cv2.waitKey()
 
     # Transform image
-    dst = cv2.warpPerspective(imgB,M,(imgA.shape[1] + imgB.shape[1], imgA.shape[0]))
+    dst = cv2.warpPerspective(imgB,M,(imgA.shape[1] + imgB.shape[1], imgA.shape[0] + imgB.shape[0]))
     dst[0:imgA.shape[0],0:imgA.shape[1]] = imgA
+    dst = trim_edges(dst)
 
     # Save image
     if args.output:
