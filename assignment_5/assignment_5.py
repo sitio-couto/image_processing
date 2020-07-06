@@ -1,31 +1,87 @@
 import sys, argparse, cv2
 import numpy as np
 
-#####################
-# Slap code in here #
-#####################
-
-
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(args):
 
     print(f"Loading Image A: {args.image_A}")
-    imgA = cv2.imread(args.image_A, -1)
+    imgA = cv2.imread(args.image_A)
+    # imgA = cv2.resize(imgA, (0,0), fx=1, fy=1)
+    imgAG = cv2.cvtColor(imgA,cv2.COLOR_BGR2GRAY)
+
     print(f"Loading Image B: {args.image_B}")
-    imgB = cv2.imread(args.image_B, -1)
+    imgB = cv2.imread(args.image_B)
+    # imgB = cv2.resize(imgB, (0,0), fx=1, fy=1)
+    imgBG = cv2.cvtColor(imgB,cv2.COLOR_BGR2GRAY)
 
     print(f"Processing...")
-    # Finding interest points
+
+    # Picking Feature Extractor
     desc = {
         'sift':cv2.xfeatures2d.SIFT_create(),
         'surf':cv2.xfeatures2d.SURF_create(),
-        'orb':cv2.ORB_create()}.get(args.descriptor)
-    kp1, des1 = desc.detectAndCompute(imgA,None)
-    kp2, des2 = desc.detectAndCompute(imgB,None)
-    cv2.imshow("A", imgA)
-    cv2.imshow('original_image_left_keypoints',cv2.drawKeypoints(imgA,kp1,None))
+        'orb':cv2.ORB_create()
+        }.get(args.descriptor)
+    
+    # find the key points and descriptors with SIFT
+    kp1, des1 = desc.detectAndCompute(imgAG,None)
+    kp2, des2 = desc.detectAndCompute(imgBG,None)
+    
+    # Catch features that match the most
+    match = cv2.BFMatcher()
+    matches = match.knnMatch(des1,des2,k=2)
+
+    good = []
+    for m,n in matches:
+        if m.distance < 0.1*n.distance:
+            good.append(m)
+
+    draw_params = dict( matchColor = (0,255,0), # draw matches in green color
+                        singlePointColor = None,
+                        flags = 2)
+
+    links = cv2.drawMatches(imgA,kp1,imgB,kp2,good,None,**draw_params)
+    
+    if args.verbose:
+        cv2.imshow("Linked Features", links)
+        cv2.waitKey()
+    
+    MIN_MATCH = 10
+    if len(good) > MIN_MATCH:
+        src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+        dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+        h,w = imgAG.shape
+        pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+        dst = cv2.perspectiveTransform(pts, M)
+        img = cv2.polylines(imgBG,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+        # cv2.imshow("original_image_overlapping.jpg", img)
+        # cv2.waitKey()
+    else:
+        raise Exception(f'Too Few Mathches (got/need: {len(good)}/{MIN_MATCH})')
+
+    dst = cv2.warpPerspective(imgB,M,(imgA.shape[1] + imgB.shape[1], imgA.shape[0]))
+    dst[0:img.shape[0],0:img.shape[1]] = imgA
+    # cv2.imshow("original_image_stitched.jpg", dst)
+    # cv2.waitKey()
+    
+    def trim(frame):
+        #crop top
+        if not np.sum(frame[0]):
+            return trim(frame[1:])
+        #crop top
+        if not np.sum(frame[-1]):
+            return trim(frame[:-2])
+        #crop top
+        if not np.sum(frame[:,0]):
+            return trim(frame[:,1:])
+        #crop top
+        if not np.sum(frame[:,-1]):
+            return trim(frame[:,:-2])
+        return frame
+    
+    cv2.imshow("original_image_stitched_crop.jpg", trim(dst))
     cv2.waitKey()
-    exit()
 
     # Save segmented image as a PBM
     if args.output:
