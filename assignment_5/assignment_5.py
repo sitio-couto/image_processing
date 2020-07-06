@@ -11,11 +11,43 @@ def trim_edges(dst):
 
     while not lines[left]: left += 1
     while not colunms[top]: top += 1
-    
     while not lines[right]: right -= 1
     while not colunms[bottom]: bottom -= 1
 
     return dst[top:bottom, left:right]
+
+def stich(desc, imgA, imgAG, imgB,imgBG):
+    # Fime images features using the descriptors
+    kpA,desA = desc.detectAndCompute(imgAG,None)
+    kpB,desB = desc.detectAndCompute(imgBG,None)
+
+    # Fetch mathches above the threshold (Brute Force)
+    good = []
+    for a,b in cv2.BFMatcher().knnMatch(desA,desB,k=2):
+        if a.distance < args.threshold*b.distance: good.append(a)
+
+    # Draw matched features for the image pair
+    draw_params = dict(matchColor = (0,255,0), flags = 2)
+    links = cv2.drawMatches(imgA,kpA,imgB,kpB,good,None,**draw_params)
+    
+    if args.verbose:
+        cv2.imshow("Linked Features", links)
+        cv2.waitKey()
+
+    # Check if there are at least 4 points
+    assert len(good)>=4, Exception(f'Too Few Mathches (got/need: {len(good)}/{4})')
+
+    # Get homography matrix to apply warping
+    goal = np.float32([ kpA[p.queryIdx].pt for p in good ]).reshape(-1,1,2)
+    curr = np.float32([ kpB[p.trainIdx].pt for p in good ]).reshape(-1,1,2)
+    M,_ = cv2.findHomography(curr, goal, cv2.RANSAC, 5.0)
+
+    # Transform image
+    dst = cv2.warpPerspective(imgB,M,(imgA.shape[1] + imgB.shape[1], imgA.shape[0] + imgB.shape[0]))
+    dst[0:imgA.shape[0],0:imgA.shape[1]] = imgA
+    
+    # Trim black edges and return
+    return trim_edges(dst)
 
 #### MAIN FUNCTION - argparsing and filter call ####
 def main(args):
@@ -38,61 +70,18 @@ def main(args):
         'orb':cv2.ORB_create()
         }.get(args.descriptor)
     
-    # find the key points and descriptors with SIFT
-    kp1, des1 = desc.detectAndCompute(imgAG,None)
-    kp2, des2 = desc.detectAndCompute(imgBG,None)
-    
-    # Catch features that match the most
-    match = cv2.BFMatcher()
-    matches = match.knnMatch(des1,des2,k=2)
+    # Stich images together
+    result = stich(desc, imgA, imgAG, imgB,imgBG)
 
-    good = []
-    for m,n in matches:
-        if m.distance < args.threshold*n.distance:
-            good.append(m)
-    good = np.asarray(good)
-
-    draw_params = dict( matchColor = (0,255,0), # draw matches in green color
-                        singlePointColor = None,
-                        flags = 2)
-
-    links = cv2.drawMatches(imgA,kp1,imgB,kp2,good,None,**draw_params)
-    
-    if args.verbose:
-        cv2.imshow("Linked Features", links)
-        cv2.waitKey()
-
-    # Check if there are at least 4 points
-    assert len(good)>=4, Exception(f'Too Few Mathches (got/need: {len(good)}/{4})')
-
-    goal = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
-    curr = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
-    M, mask = cv2.findHomography(curr, goal, cv2.RANSAC, 5.0)
-    hei,wid = imgAG.shape
-    pts = np.float32([ [0,0],[0,hei-1],[wid-1,hei-1],[wid-1,0] ]).reshape(-1,1,2)
-    dst = cv2.perspectiveTransform(pts, M)
-    img = cv2.polylines(imgBG, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
-    
-    if args.verbose:
-        cv2.imshow("Merge Line", img)
-        cv2.waitKey()
-
-    # Transform image
-    dst = cv2.warpPerspective(imgB,M,(imgA.shape[1] + imgB.shape[1], imgA.shape[0] + imgB.shape[0]))
-    dst[0:imgA.shape[0],0:imgA.shape[1]] = imgA
-    dst = trim_edges(dst)
+    print("Done.")
 
     # Save image
     if args.output:
         print(f"Saving to {args.output}...")
-        grey = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
-        grey[grey<250] = 0
-        cv2.imwrite(args.output, grey, [cv2.IMWRITE_PXM_BINARY])
+        cv2.imwrite(args.output, result)
     else: 
-        cv2.imshow("Stitched Image", dst)
+        cv2.imshow("Stitched Image", result)
         cv2.waitKey()
-
-    print("Done.")
 
 #### PROCESS COMMAND LINE INPUT #####
 if __name__ == "__main__":
@@ -117,7 +106,4 @@ if __name__ == "__main__":
                         )
 
     args = parser.parse_args()
-   
-    print(args.threshold)
-
     main(args)
